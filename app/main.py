@@ -1,7 +1,7 @@
 from typing import List
 from fastapi import FastAPI, HTTPException, Depends, Security
 from fastapi.security import APIKeyHeader
-from app.models import Answer, ArticleStatus, Quiz, UserQuizAnswer, Question, Article
+from app.models import Answer, ArticleStatus, Quiz, UserQuizAnswer, Question, Article, Stats
 from app.schemas import QuizResponse, ArticleResponse, QuizIDResponse
 from app.database import get_db
 from sqlalchemy.exc import IntegrityError
@@ -9,7 +9,6 @@ from sqlalchemy.orm import joinedload, Session
 
 app = FastAPI()
 
-# Add this after FastAPI initialization
 api_key_header = APIKeyHeader(name="Authorization", auto_error=False)
 
 
@@ -60,6 +59,24 @@ def submit_answer(answer_id: int, user_id: str = Depends(get_user_id), db: Sessi
         db.rollback()
         raise HTTPException(status_code=400, detail="Ошибка сохранения ответа")
 
+    quiz = db.query(Quiz).join(Question).join(
+        Answer).filter(Answer.id == answer_id).first()
+
+    user_answers = db.query(UserQuizAnswer).join(Answer).join(Question).filter(
+        UserQuizAnswer.user_id == user_id, Question.quiz_id == quiz.id).all()
+
+    if len(user_answers) == len(quiz.questions):
+        correct_answers = db.query(Answer).join(Question).filter(
+            Question.quiz_id == quiz.id, Answer.is_correct == True).all()
+        stats = Stats(user_id=user_id, quiz_id=quiz.id, correct_answers=[
+            answer.id for answer in correct_answers if answer.id in [user_answer.answer_id for user_answer in user_answers]])
+        try:
+            db.add(stats)
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            raise HTTPException(
+                status_code=400, detail="Ошибка сохранения статистики")
     return {"status": "success"}
 
 
