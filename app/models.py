@@ -1,5 +1,5 @@
 from typing import List, Annotated
-from sqlalchemy import ForeignKey, Enum, ARRAY, String, Integer
+from sqlalchemy import Column, ForeignKey, Enum, ARRAY, String, Table
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
 import enum
 
@@ -17,6 +17,13 @@ class BaseModel(Base):
     id: Mapped[PrimaryKey]
 
 
+stats_answers_association = Table(
+    "stats_answers",
+    Base.metadata,
+    Column("stats_id", ForeignKey("stats.id"), primary_key=True),
+    Column("answer_id", ForeignKey("answers.id"), primary_key=True))
+
+
 class Answer(BaseModel):
     __tablename__ = 'answers'
 
@@ -27,6 +34,10 @@ class Answer(BaseModel):
     question_id: Mapped[int] = mapped_column(ForeignKey("questions.id"))
 
     question: Mapped["Question"] = relationship(back_populates='answers')
+
+    stats: Mapped[List["Stats"]] = relationship(
+        "Stats", secondary=stats_answers_association, back_populates="correct_answers"
+    )
 
 
 class Question(BaseModel):
@@ -65,7 +76,9 @@ class Stats(BaseModel):
 
     user_id: Mapped[str] = mapped_column(nullable=False)
     quiz_id: Mapped[int] = mapped_column(ForeignKey("quizzes.id"))
-    correct_answers: Mapped[List[int]] = mapped_column(ARRAY(Integer))
+    correct_answers: Mapped[List["Answer"]] = relationship(
+        "Answer", secondary=stats_answers_association, back_populates="stats"
+    )
 
     quiz: Mapped["Quiz"] = relationship(back_populates='stats')
 

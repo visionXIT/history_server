@@ -9,7 +9,6 @@ from sqlalchemy.orm import joinedload, Session
 
 app = FastAPI()
 
-# Add this after FastAPI initialization
 api_key_header = APIKeyHeader(name="Authorization", auto_error=False)
 
 
