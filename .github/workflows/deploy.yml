@@ -53,4 +53,4 @@ jobs:
         run: sudo docker stop $DOCKER_IMAGE_NAME || true && sudo docker rm -f $DOCKER_IMAGE_NAME || true
 
       - name: Run image
-        run: sudo docker run -it -d --env-file=$HISTORY_SERVER_ENV -p 8000:8000 --name=$DOCKER_IMAGE_NAME $DOCKER_REGISTRY_URL/$DOCKER_IMAGE_NAME:latest
+        run: sudo docker run -it -d --env-file=$HISTORY_SERVER_ENV -p 8000:8000 --name=$DOCKER_IMAGE_NAME --network=host $DOCKER_REGISTRY_URL/$DOCKER_IMAGE_NAME:latest
