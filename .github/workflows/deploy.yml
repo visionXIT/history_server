@@ -4,6 +4,10 @@ on:
     branches:
       - dev
       - master
+      - main
+  release:
+    types:
+      - created
 env:
   DOCKER_IMAGE_NAME: history-server
   DOCKER_REGISTRY_URL: visionx2512
