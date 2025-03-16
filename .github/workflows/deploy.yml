@@ -1,0 +1,52 @@
+name: Deploy Docker image
+on:
+  push:
+    branches:
+      - dev
+      - master
+env:
+  DOCKER_IMAGE_NAME: history-server
+  DOCKER_REGISTRY_URL: visionx2512
+jobs:
+  build:
+    # Job name that shows in the GitHub UI
+    name: Build
+    # Runner to use
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      # Build the Docker image
+      - name: Build the Docker image
+        run: sudo docker build . --file Dockerfile --tag $DOCKER_IMAGE_NAME
+
+      - name: Create a latest image as well
+        run: sudo docker tag $DOCKER_IMAGE_NAME $DOCKER_REGISTRY_URL/$DOCKER_IMAGE_NAME:latest
+
+      - name: Push the latest tag
+        run: sudo docker push $DOCKER_REGISTRY_URL/$DOCKER_IMAGE_NAME:latest
+
+      - name: Remove the Docker image with latest tag
+        run: sudo docker rmi $DOCKER_REGISTRY_URL/$DOCKER_IMAGE_NAME:latest
+  deploy:
+    # Job name that shows in the GitHub UI
+    name: deploy
+    # Runner to use
+    runs-on: self-hosted
+    needs: build
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      # Build the Docker image
+      - name: Pull images
+        run: sudo docker pull $DOCKER_REGISTRY_URL/$DOCKER_IMAGE_NAME
+
+      - name: Stop previos
+        run: sudo docker stop $DOCKER_IMAGE_NAME || true && sudo docker rm -f $DOCKER_IMAGE_NAME || true
+
+      - name: Run image
+        run: sudo docker run -it -d --env-file=$HISTORY_SERVER_ENV -p 8000:8000 --name=$DOCKER_IMAGE_NAME $DOCKER_REGISTRY_URL/$DOCKER_IMAGE_NAME:latest
