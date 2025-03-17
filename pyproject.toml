@@ -1,0 +1,15 @@
+[project]
+name = "historysait-1"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "alembic>=1.15.1",
+    "boto3>=1.37.13",
+    "fastapi>=0.115.11",
+    "ipykernel>=6.29.5",
+    "minio>=7.2.15",
+    "pydantic-settings>=2.8.1",
+    "sqlalchemy>=2.0.39",
+]

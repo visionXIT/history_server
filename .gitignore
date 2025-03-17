@@ -51,3 +51,4 @@ alembic/__pycache__/
 
 # Jupyter Notebook
 .ipynb_checkpoints
+uv.lock
