@@ -43,12 +43,16 @@ def get_quiz(quiz_id: int, user_id: str = Depends(get_user_id), db: Session = De
 
 @app.post('/answer/{answer_id}')
 def submit_answer(answer_id: int, user_id: str = Depends(get_user_id), db: Session = Depends(get_db)):
-    if db.query(UserQuizAnswer).filter_by(user_id=user_id, answer_id=answer_id).first():
-        raise HTTPException(status_code=400, detail="Ответ уже дан")
-
     if db.query(Answer).filter_by(id=answer_id).first() is None:
         raise HTTPException(
             status_code=404, detail="Ответ на вопрос не найден")
+
+    question = db.query(Question).join(
+        Answer).filter(Answer.id == answer_id).first()
+    question_answers = [answer.id for answer in question.answers]
+
+    if db.query(UserQuizAnswer).filter(UserQuizAnswer.answer_id.in_(question_answers), UserQuizAnswer.user_id == user_id).first():
+        raise HTTPException(status_code=400, detail="Ответ уже дан")
 
     user_answer = UserQuizAnswer(user_id=user_id, answer_id=answer_id)
 
