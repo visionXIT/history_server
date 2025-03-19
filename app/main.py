@@ -1,11 +1,12 @@
 from typing import List
-from fastapi import FastAPI, HTTPException, Depends, Security
+from fastapi import FastAPI, HTTPException, Depends, Security, UploadFile, File
 from fastapi.security import APIKeyHeader
 from app.models import Answer, ArticleStatus, Quiz, UserQuizAnswer, Question, Article, Stats
-from app.schemas import QuizResponse, ArticleResponse, QuizIDResponse
+from app.schemas import QuizResponse, ArticleResponse, QuizIDResponse, MediaResponse
 from app.database import get_db
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload, Session
+from app.media import s3_service
 
 app = FastAPI()
 
@@ -91,7 +92,7 @@ def get_articles(db: Session = Depends(get_db)):
     return articles
 
 
-@app.post('/article')
+@app.post('/article', response_model=ArticleResponse)
 def create_article(article: ArticleResponse, db: Session = Depends(get_db)):
     article = Article(**article.model_dump(), status=ArticleStatus.DRAFT)
     db.add(article)
@@ -106,3 +107,14 @@ def get_article(article_id: int, db: Session = Depends(get_db)):
     if article is None:
         raise HTTPException(status_code=404, detail="Статья не найдена")
     return article
+
+
+@app.post('/upload', response_model=MediaResponse)
+def upload_file(name: str | None = None, file: UploadFile = File(...)):
+    file_url = s3_service.upload_file(file.file, name or file.filename)
+
+    if not file_url:
+        raise HTTPException(
+            status_code=400, detail="Ошибка при загрузке файла")
+
+    return {"url": file_url}

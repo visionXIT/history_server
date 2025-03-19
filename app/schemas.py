@@ -3,6 +3,7 @@ from pydantic import BaseModel, ValidationInfo, field_validator
 
 
 class AnswerResponse(BaseModel):
+    id: int
     title: str
     after_title: Optional[str] = None
     photos_url: List[str] = []
@@ -27,6 +28,7 @@ class AnswerResponse(BaseModel):
 
 
 class QuestionResponse(BaseModel):
+    id: int
     title: str
     description: str
     photos_url: List[str] = []
@@ -39,6 +41,7 @@ class QuestionResponse(BaseModel):
 
 
 class QuizResponse(BaseModel):
+    id: int
     title: str
     description: Optional[str] = None
     questions: List[QuestionResponse] = []
@@ -64,6 +67,7 @@ class QuizIDResponse(BaseModel):
 
 
 class ArticleResponse(BaseModel):
+    id: int
     title: str
     description: Optional[str] = None
     author: Optional[str] = None
@@ -72,3 +76,7 @@ class ArticleResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class MediaResponse(BaseModel):
+    url: str
