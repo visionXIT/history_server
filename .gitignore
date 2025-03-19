@@ -38,9 +38,6 @@ build/
 *.log
 logs/
 
-# FastAPI specific
-static/
-media/
 
 # Alembic migrations cache
 alembic/versions/__pycache__/
