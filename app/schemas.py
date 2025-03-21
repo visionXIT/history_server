@@ -34,7 +34,6 @@ class QuizResponse(BaseModel):
     description: Optional[str] = None
     photos_url: Optional[List[str]] = None
     preview_photo: Optional[str] = None
-    questions: List[QuestionResponse] = []
     is_completed: bool = False
 
     class Config:
@@ -92,3 +91,30 @@ class ArticleCreateBody(BaseModel):
 
 class MediaResponse(BaseModel):
     url: str
+
+
+class AnswerStatsResponse(BaseModel):
+    id: int
+    title: str
+    count: int
+
+    class Config:
+        from_attributes = True
+
+
+class QuestionStatsResponse(BaseModel):
+    question_id: int
+    question_title: str
+    correct_answers: int
+    incorrect_answers: int
+    answers: List[AnswerStatsResponse] = []
+
+    class Config:
+        from_attributes = True
+
+
+class QuizStatsResponse(BaseModel):
+    questions: List[QuestionStatsResponse] = []
+
+    class Config:
+        from_attributes = True

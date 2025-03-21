@@ -2,7 +2,7 @@ from typing import List
 from fastapi import FastAPI, HTTPException, Depends, Security, UploadFile, File
 from fastapi.security import APIKeyHeader
 from app.models import Answer, ArticleStatus, Quiz, UserQuizAnswer, Question, Article, Stats
-from app.schemas import AnswerResponse, QuestionResponse, QuizCreate, QuizIDResponse, QuizResponse, ArticleResponse, MediaResponse, ArticleCreateBody
+from app.schemas import AnswerResponse, AnswerStatsResponse, QuestionResponse, QuestionStatsResponse, QuizCreate, QuizIDResponse, QuizResponse, ArticleResponse, MediaResponse, ArticleCreateBody, QuizStatsResponse
 from app.database import get_db
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload, Session
@@ -215,3 +215,39 @@ def upload_file(name: str | None = None, file: UploadFile = File(...)):
             status_code=400, detail="Ошибка при загрузке файла")
 
     return {"url": file_url}
+
+
+@app.get('/stats/{quiz_id}', response_model=QuizStatsResponse)
+def get_stats(quiz_id: int, user_id: str = Depends(get_user_id), db: Session = Depends(get_db)):
+    stats = db.query(Stats).filter(Stats.quiz_id == quiz_id,
+                                   Stats.user_id == user_id).first()
+    if stats is None:
+        raise HTTPException(
+            status_code=404, detail="Статистики этого вопроса нет")
+    quiz = db.query(Quiz).filter(Quiz.id == quiz_id).first()
+
+    questions_response = []
+    for question in quiz.questions:
+        correct_answers_count = db.query(UserQuizAnswer).join(Answer).filter(
+            Answer.question_id == question.id, Answer.is_correct == True).count()
+        incorrect_answers_count = db.query(UserQuizAnswer).join(Answer).filter(
+            Answer.question_id == question.id, Answer.is_correct == False).count()
+        answers_response = [
+            AnswerStatsResponse(
+                id=answer.id,
+                title=answer.title,
+                count=db.query(UserQuizAnswer).filter(
+                    UserQuizAnswer.answer_id == answer.id).count()
+            )
+            for answer in question.answers
+        ]
+        questions_response.append(
+            QuestionStatsResponse(
+                question_id=question.id,
+                question_title=question.title,
+                correct_answers=correct_answers_count,
+                incorrect_answers=incorrect_answers_count,
+                answers=answers_response
+            )
+        )
+    return QuizStatsResponse(questions=questions_response)
