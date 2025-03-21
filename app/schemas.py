@@ -78,5 +78,13 @@ class ArticleResponse(BaseModel):
         from_attributes = True
 
 
+class ArticleCreateBody(BaseModel):
+    title: str
+    description: Optional[str] = None
+    author: Optional[str] = None
+    content_url: Optional[str] = None
+    photo_url: Optional[str] = None
+
+
 class MediaResponse(BaseModel):
     url: str

@@ -2,7 +2,7 @@ from typing import List
 from fastapi import FastAPI, HTTPException, Depends, Security, UploadFile, File
 from fastapi.security import APIKeyHeader
 from app.models import Answer, ArticleStatus, Quiz, UserQuizAnswer, Question, Article, Stats
-from app.schemas import QuizResponse, ArticleResponse, QuizIDResponse, MediaResponse
+from app.schemas import QuizResponse, ArticleResponse, QuizIDResponse, MediaResponse, ArticleCreateBody
 from app.database import get_db
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload, Session
@@ -93,7 +93,7 @@ def get_articles(db: Session = Depends(get_db)):
 
 
 @app.post('/article', response_model=ArticleResponse)
-def create_article(article: ArticleResponse, db: Session = Depends(get_db)):
+def create_article(article: ArticleCreateBody, db: Session = Depends(get_db)):
     article = Article(**article.model_dump(), status=ArticleStatus.DRAFT)
     db.add(article)
     db.commit()
