@@ -1,5 +1,5 @@
 from typing import List, Optional
-from pydantic import BaseModel, ValidationInfo, field_validator
+from pydantic import BaseModel
 
 
 class AnswerResponse(BaseModel):
@@ -13,18 +13,6 @@ class AnswerResponse(BaseModel):
 
     class Config:
         from_attributes = True
-
-    @field_validator('is_correct', mode='before')
-    def check_is_correct(cls, value: bool):
-        if not value:
-            return None
-        return value
-
-    @field_validator('after_title', mode='before')
-    def check_after_title(cls, value, info: ValidationInfo):
-        if not info.data.get('is_chosen'):
-            return None
-        return value
 
 
 class QuestionResponse(BaseModel):
@@ -47,23 +35,33 @@ class QuizResponse(BaseModel):
     questions: List[QuestionResponse] = []
     photos_url: Optional[List[str]] = None
     preview_photo: Optional[str] = None
+    questions: List[QuestionResponse] = []
     is_completed: bool = False
 
     class Config:
         from_attributes = True
 
 
-class QuizIDResponse(BaseModel):
+class AnswerCreate(BaseModel):
+    title: str
+    after_title: Optional[str] = None
+    photos_url: Optional[List[str]]
+    is_correct: bool
+
+
+class QuestionCreate(BaseModel):
     title: str
     description: Optional[str] = None
-    questions: List[QuestionResponse] = []
+    photos_url: Optional[List[str]] = None
+    answers: List[AnswerCreate] = []
+
+
+class QuizCreate(BaseModel):
+    title: str
+    description: Optional[str] = None
     photos_url: Optional[List[str]] = None
     preview_photo: Optional[str] = None
-    questions: List[QuestionResponse] = []
-    is_completed: bool = False
-
-    class Config:
-        from_attributes = True
+    questions: List[QuestionCreate] = []
 
 
 class ArticleResponse(BaseModel):
