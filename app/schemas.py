@@ -32,11 +32,17 @@ class QuizResponse(BaseModel):
     id: int
     title: str
     description: Optional[str] = None
-    questions: List[QuestionResponse] = []
     photos_url: Optional[List[str]] = None
     preview_photo: Optional[str] = None
     questions: List[QuestionResponse] = []
     is_completed: bool = False
+
+    class Config:
+        from_attributes = True
+
+
+class QuizIDResponse(QuizResponse):
+    questions: List[QuestionResponse] = []
 
     class Config:
         from_attributes = True

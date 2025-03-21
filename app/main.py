@@ -2,7 +2,7 @@ from typing import List
 from fastapi import FastAPI, HTTPException, Depends, Security, UploadFile, File
 from fastapi.security import APIKeyHeader
 from app.models import Answer, ArticleStatus, Quiz, UserQuizAnswer, Question, Article, Stats
-from app.schemas import AnswerResponse, QuestionResponse, QuizCreate, QuizResponse, ArticleResponse, MediaResponse, ArticleCreateBody
+from app.schemas import AnswerResponse, QuestionResponse, QuizCreate, QuizIDResponse, QuizResponse, ArticleResponse, MediaResponse, ArticleCreateBody
 from app.database import get_db
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload, Session
@@ -21,8 +21,7 @@ def get_user_id(authorization: str | None = Security(api_key_header)) -> str:
 
 @app.get('/quiz', response_model=List[QuizResponse])
 def get_quizes(db: Session = Depends(get_db), user_id: str = Depends(get_user_id)):
-    quizes = db.query(Quiz).options(joinedload(
-        Quiz.questions).joinedload(Question.answers)).all()
+    quizes = db.query(Quiz).options(joinedload(Quiz.questions)).all()
     quiz_responses = []
 
     for quiz in quizes:
@@ -31,43 +30,11 @@ def get_quizes(db: Session = Depends(get_db), user_id: str = Depends(get_user_id
 
         quiz_completed = len(user_answers) == len(quiz.questions)
 
-        questions_response = []
-        for question in quiz.questions:
-            question_answered = any(
-                ua.answer_id in [a.id for a in question.answers] for ua in user_answers)
-            answers_response = [
-                AnswerResponse(
-                    id=answer.id,
-                    title=answer.title,
-                    after_title=answer.after_title,
-                    photos_url=answer.photos_url,
-                    is_chosen=any(ua.answer_id ==
-                                  answer.id for ua in user_answers),
-                    is_correct=answer.is_correct,
-                    question_id=answer.question_id
-                )
-                for answer in question.answers
-            ]
-            questions_response.append(
-                QuestionResponse(
-                    id=question.id,
-                    title=question.title,
-                    description=question.description,
-                    photos_url=question.photos_url,
-                    is_answered=question_answered,
-                    quiz_id=question.quiz_id,
-                    answers=answers_response
-                )
-            )
-
         quiz_responses.append(QuizResponse(
             id=quiz.id,
             title=quiz.title,
             description=quiz.description,
             is_completed=quiz_completed,
-            questions=questions_response,
-            photos_url=quiz.photos_url,
-            preview_photo=quiz.preview_photo
         ))
 
     return quiz_responses
@@ -118,9 +85,8 @@ def create_quiz(quiz: QuizCreate, db: Session = Depends(get_db), user_id: str = 
     return new_quiz
 
 
-@app.get('/quiz/{quiz_id}', response_model=QuizResponse)
+@app.get('/quiz/{quiz_id}', response_model=QuizIDResponse)
 def get_quiz(quiz_id: int, user_id: str = Depends(get_user_id), db: Session = Depends(get_db)):
-    print(user_id)
     quiz = db.query(Quiz).options(joinedload(Quiz.questions)
                                   ).filter(Quiz.id == quiz_id).first()
 
@@ -129,10 +95,48 @@ def get_quiz(quiz_id: int, user_id: str = Depends(get_user_id), db: Session = De
 
     user_answers = db.query(UserQuizAnswer).join(Answer).join(Question).filter(
         UserQuizAnswer.user_id == user_id, Question.quiz_id == quiz_id).all()
-
+    question_answered = [
+        question for question in quiz.questions if any(ua.answer_id in [
+            a.id for a in question.answers] for ua in user_answers)]
     quiz_completed = len(user_answers) == len(quiz.questions)
 
-    return QuizResponse(id=quiz.id, title=quiz.title, text=quiz.description, is_completed=quiz_completed, questions=quiz.questions, photos_url=quiz.photos_url, preview_photo=quiz.preview_photo)
+    questions_response = []
+    for question in quiz.questions:
+        answers_response = [
+            AnswerResponse(
+                id=answer.id,
+                title=answer.title,
+                after_title=answer.after_title,
+                photos_url=answer.photos_url,
+                is_chosen=any(ua.answer_id ==
+                              answer.id for ua in user_answers),
+                is_correct=answer.is_correct if question_answered else None,
+                question_id=answer.question_id
+            )
+            for answer in question.answers
+        ]
+        questions_response.append(
+            QuestionResponse(
+                id=question.id,
+                title=question.title,
+                description=question.description,
+                photos_url=question.photos_url,
+                is_answered=any(ua.answer_id in [
+                                a.id for a in question.answers] for ua in user_answers),
+                quiz_id=question.quiz_id,
+                answers=answers_response
+            )
+        )
+
+    return QuizIDResponse(
+        id=quiz.id,
+        title=quiz.title,
+        description=quiz.description,
+        is_completed=quiz_completed,
+        questions=questions_response,
+        photos_url=quiz.photos_url,
+        preview_photo=quiz.preview_photo
+    )
 
 
 @app.post('/answer/{answer_id}')
