@@ -29,7 +29,8 @@ class Answer(BaseModel):
 
     title: Mapped[str] = mapped_column(nullable=False)
     after_title: Mapped[str] = mapped_column(nullable=False)
-    photos_url: Mapped[List[str]] = mapped_column(ARRAY(String))
+    photos_url: Mapped[List[str] | None] = mapped_column(
+        ARRAY(String), nullable=True)
     is_correct: Mapped[bool | None]
     question_id: Mapped[int] = mapped_column(ForeignKey("questions.id"))
 
@@ -46,7 +47,8 @@ class Question(BaseModel):
     title: Mapped[str] = mapped_column(nullable=False)
     description: Mapped[str | None]
     quiz_id: Mapped[int] = mapped_column(ForeignKey("quizzes.id"))
-    photos_url: Mapped[List[str]] = mapped_column(ARRAY(String))
+    photos_url: Mapped[List[str] | None] = mapped_column(
+        ARRAY(String), nullable=True)
 
     answers: Mapped[List["Answer"]] = relationship(back_populates='question')
     quiz: Mapped["Quiz"] = relationship(back_populates='questions')
@@ -57,7 +59,8 @@ class Quiz(BaseModel):
 
     title: Mapped[str] = mapped_column(nullable=False)
     description: Mapped[str | None]
-    photos_url: Mapped[List[str]] = mapped_column(ARRAY(String))
+    photos_url: Mapped[List[str] | None] = mapped_column(
+        ARRAY(String), nullable=True)
     preview_photo: Mapped[str | None]
 
     questions: Mapped[List["Question"]] = relationship(back_populates='quiz')

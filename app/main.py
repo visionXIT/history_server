@@ -1,6 +1,7 @@
 from typing import List
 from fastapi import FastAPI, HTTPException, Depends, Security, UploadFile, File
 from fastapi.security import APIKeyHeader
+from sqlalchemy import func
 from app.models import Answer, ArticleStatus, Quiz, UserQuizAnswer, Question, Article, Stats
 from app.schemas import AnswerResponse, AnswerStatsResponse, QuestionResponse, QuestionStatsResponse, QuizCreate, QuizIDResponse, QuizResponse, ArticleResponse, MediaResponse, ArticleCreateBody, QuizStatsResponse
 from app.database import get_db
@@ -111,7 +112,6 @@ def get_quiz(quiz_id: int, user_id: str = Depends(get_user_id), db: Session = De
                 is_chosen=any(ua.answer_id ==
                               answer.id for ua in user_answers),
                 is_correct=answer.is_correct if question_answered else None,
-                question_id=answer.question_id
             )
             for answer in question.answers
         ]
@@ -123,7 +123,6 @@ def get_quiz(quiz_id: int, user_id: str = Depends(get_user_id), db: Session = De
                 photos_url=question.photos_url,
                 is_answered=any(ua.answer_id in [
                                 a.id for a in question.answers] for ua in user_answers),
-                quiz_id=question.quiz_id,
                 answers=answers_response
             )
         )
@@ -134,20 +133,18 @@ def get_quiz(quiz_id: int, user_id: str = Depends(get_user_id), db: Session = De
         description=quiz.description,
         is_completed=quiz_completed,
         questions=questions_response,
-        photos_url=quiz.photos_url,
-        preview_photo=quiz.preview_photo
     )
 
 
 @app.post('/answer/{answer_id}')
 def submit_answer(answer_id: int, user_id: str = Depends(get_user_id), db: Session = Depends(get_db)):
-    if db.query(Answer).filter_by(id=answer_id).first() is None:
+    answer = db.query(Answer).join(Question).join(
+        Quiz).filter(Answer.id == answer_id).first()
+    if answer is None:
         raise HTTPException(
             status_code=404, detail="Ответ на вопрос не найден")
 
-    question = db.query(Question).join(
-        Answer).filter(Answer.id == answer_id).first()
-    question_answers = [answer.id for answer in question.answers]
+    question_answers = [answer.id for answer in answer.question.answers]
 
     if db.query(UserQuizAnswer).filter(UserQuizAnswer.answer_id.in_(question_answers), UserQuizAnswer.user_id == user_id).first():
         raise HTTPException(status_code=400, detail="Ответ уже дан")
@@ -161,16 +158,13 @@ def submit_answer(answer_id: int, user_id: str = Depends(get_user_id), db: Sessi
         db.rollback()
         raise HTTPException(status_code=400, detail="Ошибка сохранения ответа")
 
-    quiz = db.query(Quiz).join(Question).join(
-        Answer).filter(Answer.id == answer_id).first()
+    user_answers = db.query(UserQuizAnswer).join(Answer).join(Question).join(Quiz).filter(
+        UserQuizAnswer.user_id == user_id, Question.quiz_id == Quiz.id).all()
 
-    user_answers = db.query(UserQuizAnswer).join(Answer).join(Question).filter(
-        UserQuizAnswer.user_id == user_id, Question.quiz_id == quiz.id).all()
-
-    if len(user_answers) == len(quiz.questions):
+    if len(user_answers) == len(answer.question.quiz.questions):
         correct_answers = db.query(Answer).join(Question).filter(
-            Question.quiz_id == quiz.id, Answer.is_correct == True).all()
-        stats = Stats(user_id=user_id, quiz_id=quiz.id, correct_answers=[
+            Question.quiz_id == answer.question.quiz.id, Answer.is_correct == True).all()
+        stats = Stats(user_id=user_id, quiz_id=answer.question.quiz.id, correct_answers=[
             answer for answer in correct_answers if answer.id in [user_answer.answer_id for user_answer in user_answers]])
         try:
             db.add(stats)
@@ -179,7 +173,8 @@ def submit_answer(answer_id: int, user_id: str = Depends(get_user_id), db: Sessi
             db.rollback()
             raise HTTPException(
                 status_code=400, detail="Ошибка сохранения статистики")
-    return {"status": "success"}
+
+    return get_quiz(answer.question.quiz.id, user_id, db)
 
 
 @app.get('/article', response_model=List[ArticleResponse])
@@ -219,19 +214,25 @@ def upload_file(name: str | None = None, file: UploadFile = File(...)):
 
 @app.get('/stats/{quiz_id}', response_model=QuizStatsResponse)
 def get_stats(quiz_id: int, user_id: str = Depends(get_user_id), db: Session = Depends(get_db)):
-    stats = db.query(Stats).filter(Stats.quiz_id == quiz_id,
-                                   Stats.user_id == user_id).first()
+    stats = db.query(Stats).join(Quiz).filter(Stats.quiz_id == quiz_id,
+                                              Stats.user_id == user_id, Quiz.id == quiz_id).first()
     if stats is None:
         raise HTTPException(
             status_code=404, detail="Статистики этого вопроса нет")
-    quiz = db.query(Quiz).filter(Quiz.id == quiz_id).first()
 
     questions_response = []
-    for question in quiz.questions:
-        correct_answers_count = db.query(UserQuizAnswer).join(Answer).filter(
-            Answer.question_id == question.id, Answer.is_correct == True).count()
-        incorrect_answers_count = db.query(UserQuizAnswer).join(Answer).filter(
-            Answer.question_id == question.id, Answer.is_correct == False).count()
+    for question in stats.quiz.questions:
+        counts = (db.query(Answer.is_correct, func.count().label("count")).join(
+            UserQuizAnswer).filter(Answer.question_id == question.id).group_by(Answer.is_correct).all())
+
+        correct_answers_count = 0
+        incorrect_answers_count = 0
+
+        for is_correct, count in counts:
+            if is_correct:
+                correct_answers_count = count
+            else:
+                incorrect_answers_count = count
         answers_response = [
             AnswerStatsResponse(
                 id=answer.id,
