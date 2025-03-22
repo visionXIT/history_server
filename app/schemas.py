@@ -6,10 +6,9 @@ class AnswerResponse(BaseModel):
     id: int
     title: str
     after_title: Optional[str] = None
-    photos_url: List[str] = []
+    photos_url: List[str] | None = None
     is_chosen: bool = False
     is_correct: Optional[bool] = None
-    question_id: int
 
     class Config:
         from_attributes = True
@@ -18,10 +17,9 @@ class AnswerResponse(BaseModel):
 class QuestionResponse(BaseModel):
     id: int
     title: str
-    description: str
-    photos_url: List[str] = []
+    description: str | None = None
+    photos_url: List[str] | None = None
     is_answered: bool = False
-    quiz_id: int
     answers: List[AnswerResponse] = []
 
     class Config:
@@ -49,7 +47,7 @@ class QuizIDResponse(QuizResponse):
 
 class AnswerCreate(BaseModel):
     title: str
-    after_title: Optional[str] = None
+    after_title: str
     photos_url: Optional[List[str]]
     is_correct: bool
 
