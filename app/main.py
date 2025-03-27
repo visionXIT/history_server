@@ -160,7 +160,6 @@ def submit_answer(answer_id: int, user_id: str = Depends(get_user_id), db: Sessi
 
     user_answers = db.query(UserQuizAnswer).join(Answer).join(Question).join(Quiz).filter(
         UserQuizAnswer.user_id == user_id, Answer.question_id == Question.id, Question.quiz_id == Quiz.id, Quiz.id == answer.question.quiz.id).all()
-    print(len(user_answers), len(answer.question.quiz.questions))
     if len(user_answers) == len(answer.question.quiz.questions):
         correct_answers = db.query(Answer).join(Question).filter(
             Question.quiz_id == answer.question.quiz.id, Answer.is_correct == True).all()
