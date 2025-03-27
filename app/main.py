@@ -111,7 +111,7 @@ def get_quiz(quiz_id: int, user_id: str = Depends(get_user_id), db: Session = De
                 photos_url=answer.photos_url,
                 is_chosen=any(ua.answer_id ==
                               answer.id for ua in user_answers),
-                is_correct=answer.is_correct if question_answered else None,
+                is_correct=answer.is_correct if question in question_answered else None,
             )
             for answer in question.answers
         ]
@@ -159,8 +159,7 @@ def submit_answer(answer_id: int, user_id: str = Depends(get_user_id), db: Sessi
         raise HTTPException(status_code=400, detail="Ошибка сохранения ответа")
 
     user_answers = db.query(UserQuizAnswer).join(Answer).join(Question).join(Quiz).filter(
-        UserQuizAnswer.user_id == user_id, Question.quiz_id == Quiz.id).all()
-
+        UserQuizAnswer.user_id == user_id, Answer.question_id == Question.id, Question.quiz_id == Quiz.id, Quiz.id == answer.question.quiz.id).all()
     if len(user_answers) == len(answer.question.quiz.questions):
         correct_answers = db.query(Answer).join(Question).filter(
             Question.quiz_id == answer.question.quiz.id, Answer.is_correct == True).all()
