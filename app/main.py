@@ -201,6 +201,18 @@ def get_article(article_id: int, db: Session = Depends(get_db)):
     return article
 
 
+@app.patch('/article/{article_id}', response_model=ArticleResponse)
+def update_article(article_id: int, article: ArticleCreateBody, db: Session = Depends(get_db)):
+    article_to_update = db.query(Article).filter(
+        Article.id == article_id).first()
+    if article_to_update is None:
+        raise HTTPException(status_code=404, detail="Статья не найдена")
+    for key, value in article.model_dump().items():
+        setattr(article_to_update, key, value)
+    db.commit()
+    return article_to_update
+
+
 @app.post('/upload', response_model=MediaResponse)
 def upload_file(name: str | None = None, file: UploadFile = File(...)):
     file_url = s3_service.upload_file(file.file, name or file.filename)
