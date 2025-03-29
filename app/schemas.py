@@ -81,10 +81,18 @@ class ArticleResponse(BaseModel):
 
 class ArticleCreateBody(BaseModel):
     title: str
-    description: Optional[str] = None
-    author: Optional[str] = None
-    content_url: Optional[str] = None
-    photo_url: Optional[str] = None
+    description: str | None = None
+    author: str | None = None
+    content_url: str | None = None
+    photo_url: str | None = None
+
+
+class ArticleUpdateBody(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    author: str | None = None
+    content_url: str | None = None
+    photo_url: str | None = None
 
 
 class MediaResponse(BaseModel):

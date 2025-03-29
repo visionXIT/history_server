@@ -3,7 +3,7 @@ from fastapi import FastAPI, HTTPException, Depends, Security, UploadFile, File
 from fastapi.security import APIKeyHeader
 from sqlalchemy import func
 from app.models import Answer, ArticleStatus, Quiz, UserQuizAnswer, Question, Article, Stats
-from app.schemas import AnswerResponse, AnswerStatsResponse, QuestionResponse, QuestionStatsResponse, QuizCreate, QuizIDResponse, QuizResponse, ArticleResponse, MediaResponse, ArticleCreateBody, QuizStatsResponse
+from app.schemas import AnswerResponse, AnswerStatsResponse, ArticleUpdateBody, QuestionResponse, QuestionStatsResponse, QuizCreate, QuizIDResponse, QuizResponse, ArticleResponse, MediaResponse, ArticleCreateBody, QuizStatsResponse
 from app.database import get_db
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload, Session
@@ -201,12 +201,12 @@ def get_article(article_id: int, db: Session = Depends(get_db)):
 
 
 @app.patch('/article/{article_id}', response_model=ArticleResponse)
-def update_article(article_id: int, article: ArticleCreateBody, db: Session = Depends(get_db)):
+def update_article(article_id: int, article: ArticleUpdateBody, db: Session = Depends(get_db)):
     article_to_update = db.query(Article).filter(
         Article.id == article_id).first()
     if article_to_update is None:
         raise HTTPException(status_code=404, detail="Статья не найдена")
-    for key, value in article.model_dump().items():
+    for key, value in article.model_dump(exclude_unset=True).items():
         setattr(article_to_update, key, value)
     db.commit()
     return article_to_update
