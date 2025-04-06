@@ -10,6 +10,7 @@ dependencies = [
     "fastapi>=0.115.11",
     "ipykernel>=6.29.5",
     "minio>=7.2.15",
+    "prometheus-client>=0.21.1",
     "pydantic-settings>=2.8.1",
     "sqlalchemy>=2.0.39",
 ]

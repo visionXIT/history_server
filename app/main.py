@@ -1,6 +1,7 @@
 from typing import List
 from fastapi import FastAPI, HTTPException, Depends, Security, UploadFile, File
 from fastapi.security import APIKeyHeader
+from prometheus_client import make_asgi_app
 from sqlalchemy import func
 from app.models import Answer, ArticleStatus, Quiz, UserQuizAnswer, Question, Article, Stats
 from app.schemas import AnswerResponse, AnswerStatsResponse, ArticleUpdateBody, QuestionResponse, QuestionStatsResponse, QuizCreate, QuizIDResponse, QuizResponse, ArticleResponse, MediaResponse, ArticleCreateBody, QuizStatsResponse
@@ -10,6 +11,9 @@ from sqlalchemy.orm import joinedload, Session
 from app.media import s3_service
 
 app = FastAPI()
+
+metrics_app = make_asgi_app()
+app.mount("/metrics", metrics_app)
 
 api_key_header = APIKeyHeader(name="Authorization", auto_error=False)
 
