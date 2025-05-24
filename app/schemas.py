@@ -124,3 +124,20 @@ class QuizStatsResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class GalleryPhotoCreate(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    order: int = 0
+
+
+class GalleryPhotoResponse(BaseModel):
+    id: int
+    title: str | None
+    description: str | None
+    order: int
+    media_items: List[MediaResponse]
+
+    class Config:
+        from_attributes = True
