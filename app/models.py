@@ -105,3 +105,13 @@ class Article(BaseModel):
         nullable=False,
         default=ArticleStatus.DRAFT
     )
+
+
+class GalleryPhoto(BaseModel):
+    __tablename__ = 'gallery_photos'
+
+    id: Mapped[PrimaryKey]
+    title: Mapped[str | None] = mapped_column(nullable=True)
+    description: Mapped[str | None] = mapped_column(nullable=True)
+    order: Mapped[int] = mapped_column(default=0)
+    url: Mapped[str] = mapped_column(nullable=False)

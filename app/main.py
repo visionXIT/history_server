@@ -3,8 +3,10 @@ from fastapi import FastAPI, HTTPException, Depends, Security, UploadFile, File
 from fastapi.security import APIKeyHeader
 from prometheus_client import make_asgi_app
 from sqlalchemy import func
-from app.models import Answer, ArticleStatus, Quiz, UserQuizAnswer, Question, Article, Stats
-from app.schemas import AnswerResponse, AnswerStatsResponse, ArticleUpdateBody, QuestionResponse, QuestionStatsResponse, QuizCreate, QuizIDResponse, QuizResponse, ArticleResponse, MediaResponse, ArticleCreateBody, QuizStatsResponse
+from app.models import Answer, ArticleStatus, Quiz, UserQuizAnswer, Question, Article, Stats, GalleryPhoto
+from app.schemas import AnswerResponse, AnswerStatsResponse, ArticleUpdateBody, QuestionResponse, QuestionStatsResponse, \
+    QuizCreate, QuizIDResponse, QuizResponse, ArticleResponse, MediaResponse, ArticleCreateBody, QuizStatsResponse, \
+    GalleryPhotoResponse, GalleryPhotoCreate
 from app.database import get_db
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload, Session
@@ -47,7 +49,6 @@ def get_quizes(db: Session = Depends(get_db), user_id: str = Depends(get_user_id
 
 @app.post('/quiz')
 def create_quiz(quiz: QuizCreate, db: Session = Depends(get_db), user_id: str = Depends(get_user_id)):
-
     if len(quiz.questions) < 1:
         raise HTTPException(
             status_code=400, detail="Викторина должна содержать хотя бы 1 вопрос")
@@ -126,7 +127,7 @@ def get_quiz(quiz_id: int, user_id: str = Depends(get_user_id), db: Session = De
                 description=question.description,
                 photos_url=question.photos_url,
                 is_answered=any(ua.answer_id in [
-                                a.id for a in question.answers] for ua in user_answers),
+                    a.id for a in question.answers] for ua in user_answers),
                 answers=answers_response
             )
         )
@@ -150,7 +151,8 @@ def submit_answer(answer_id: int, user_id: str = Depends(get_user_id), db: Sessi
 
     question_answers = [answer.id for answer in answer.question.answers]
 
-    if db.query(UserQuizAnswer).filter(UserQuizAnswer.answer_id.in_(question_answers), UserQuizAnswer.user_id == user_id).first():
+    if db.query(UserQuizAnswer).filter(UserQuizAnswer.answer_id.in_(question_answers),
+                                       UserQuizAnswer.user_id == user_id).first():
         raise HTTPException(status_code=400, detail="Ответ уже дан")
 
     user_answer = UserQuizAnswer(user_id=user_id, answer_id=answer_id)
@@ -163,12 +165,14 @@ def submit_answer(answer_id: int, user_id: str = Depends(get_user_id), db: Sessi
         raise HTTPException(status_code=400, detail="Ошибка сохранения ответа")
 
     user_answers = db.query(UserQuizAnswer).join(Answer).join(Question).join(Quiz).filter(
-        UserQuizAnswer.user_id == user_id, Answer.question_id == Question.id, Question.quiz_id == Quiz.id, Quiz.id == answer.question.quiz.id).all()
+        UserQuizAnswer.user_id == user_id, Answer.question_id == Question.id, Question.quiz_id == Quiz.id,
+        Quiz.id == answer.question.quiz.id).all()
     if len(user_answers) == len(answer.question.quiz.questions):
         correct_answers = db.query(Answer).join(Question).filter(
             Question.quiz_id == answer.question.quiz.id, Answer.is_correct == True).all()
         stats = Stats(user_id=user_id, quiz_id=answer.question.quiz.id, correct_answers=[
-            answer for answer in correct_answers if answer.id in [user_answer.answer_id for user_answer in user_answers]])
+            answer for answer in correct_answers if
+            answer.id in [user_answer.answer_id for user_answer in user_answers]])
         try:
             db.add(stats)
             db.commit()
@@ -267,3 +271,25 @@ def get_stats(quiz_id: int, user_id: str = Depends(get_user_id), db: Session = D
             )
         )
     return QuizStatsResponse(questions=questions_response)
+
+
+@app.get('/gallery', response_model=List[GalleryPhotoResponse])
+def get_gallery_photos(db: Session = Depends(get_db)):
+    photos = db.query(GalleryPhoto).all()
+    return photos
+
+
+@app.post('/gallery', response_model=GalleryPhotoResponse)
+def create_gallery_photo(
+        photo_data: GalleryPhotoCreate,
+        db: Session = Depends(get_db)
+):
+    photo = GalleryPhoto(
+        title=photo_data.title,
+        description=photo_data.description,
+        order=photo_data.order,
+        url=photo_data.url
+    )
+    db.add(photo)
+    db.commit()
+    return photo
