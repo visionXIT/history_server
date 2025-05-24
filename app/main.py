@@ -3,7 +3,7 @@ from fastapi import FastAPI, HTTPException, Depends, Security, UploadFile, File
 from fastapi.security import APIKeyHeader
 from prometheus_client import make_asgi_app
 from sqlalchemy import func
-from app.models import Answer, ArticleStatus, Quiz, UserQuizAnswer, Question, Article, Stats, GalleryPhoto, Media
+from app.models import Answer, ArticleStatus, Quiz, UserQuizAnswer, Question, Article, Stats, GalleryPhoto
 from app.schemas import AnswerResponse, AnswerStatsResponse, ArticleUpdateBody, QuestionResponse, QuestionStatsResponse, \
     QuizCreate, QuizIDResponse, QuizResponse, ArticleResponse, MediaResponse, ArticleCreateBody, QuizStatsResponse, \
     GalleryPhotoResponse, GalleryPhotoCreate
@@ -275,7 +275,7 @@ def get_stats(quiz_id: int, user_id: str = Depends(get_user_id), db: Session = D
 
 @app.get('/gallery', response_model=List[GalleryPhotoResponse])
 def get_gallery_photos(db: Session = Depends(get_db)):
-    photos = db.query(GalleryPhoto).options(joinedload(GalleryPhoto.media_items)).all()
+    photos = db.query(GalleryPhoto).all()
     return photos
 
 
@@ -287,25 +287,9 @@ def create_gallery_photo(
     photo = GalleryPhoto(
         title=photo_data.title,
         description=photo_data.description,
-        order=photo_data.order
+        order=photo_data.order,
+        url=photo_data.url
     )
     db.add(photo)
     db.commit()
     return photo
-
-
-@app.post('/gallery/{photo_id}/media')
-def add_media_to_photo(
-        photo_id: int,
-        media_id: int,
-        db: Session = Depends(get_db)
-):
-    photo = db.query(GalleryPhoto).get(photo_id)
-    media = db.query(Media).get(media_id)
-
-    if not photo or not media:
-        raise HTTPException(status_code=404, detail="Not found")
-
-    media.gallery_photo_id = photo_id
-    db.commit()
-    return {"message": "Media added to photo"}

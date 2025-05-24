@@ -1,9 +1,7 @@
 from typing import List, Annotated
 from sqlalchemy import Column, ForeignKey, Enum, ARRAY, String, Table
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
-from sqlalchemy.sql import func
 import enum
-from datetime import datetime
 
 PrimaryKey = Annotated[int, mapped_column(primary_key=True, index=True)]
 StrList = List[str]
@@ -109,20 +107,6 @@ class Article(BaseModel):
     )
 
 
-class Media(BaseModel):
-    __tablename__ = 'media'
-
-    id: Mapped[PrimaryKey]
-    url: Mapped[str] = mapped_column(nullable=False)
-    file_name: Mapped[str | None]
-    created_at: Mapped[datetime] = mapped_column(default=func.now())
-    gallery_photo_id: Mapped[int | None] = mapped_column(
-        ForeignKey("gallery_photos.id", ondelete="CASCADE"),
-        nullable=True
-    )
-    gallery_photo: Mapped["GalleryPhoto"] = relationship("GalleryPhoto", back_populates="media_items")
-
-
 class GalleryPhoto(BaseModel):
     __tablename__ = 'gallery_photos'
 
@@ -130,4 +114,4 @@ class GalleryPhoto(BaseModel):
     title: Mapped[str | None] = mapped_column(nullable=True)
     description: Mapped[str | None] = mapped_column(nullable=True)
     order: Mapped[int] = mapped_column(default=0)
-    media_items: Mapped[List["Media"]] = relationship("Media", back_populates="gallery_photo")
+    url: Mapped[str] = mapped_column(nullable=False)

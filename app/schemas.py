@@ -130,6 +130,7 @@ class GalleryPhotoCreate(BaseModel):
     title: str | None = None
     description: str | None = None
     order: int = 0
+    url: str
 
 
 class GalleryPhotoResponse(BaseModel):
@@ -137,7 +138,7 @@ class GalleryPhotoResponse(BaseModel):
     title: str | None
     description: str | None
     order: int
-    media_items: List[MediaResponse]
+    url: str
 
     class Config:
         from_attributes = True
